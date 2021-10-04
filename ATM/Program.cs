@@ -11,17 +11,13 @@ namespace ATM
     class Program
     {
 
-        static void TransactionHistory(int cid)
+        static void TransactionHistory(int CID)
         {
             Console.Clear();
-
-            string connetionString = @"Server=localhost;Database=test;User ID=root;Password=;SSL Mode=None";
-            using (MySqlConnection cnn = new MySqlConnection(connetionString))
+            using (MySqlConnection cnn = new MySqlConnection(SQLCommands.ConnectionString()))
             {
                 cnn.Open();
-
-                string Transactions = String.Format($"SELECT * from `transaction` WHERE CID_FROM='{cid}' OR CID_TO='{cid}'");
-                MySqlCommand commandAmount = new MySqlCommand(Transactions, cnn);
+                MySqlCommand commandAmount = new MySqlCommand(SQLCommands.GetTransactionDetails(CID), cnn);
                 using (MySqlDataReader dr = commandAmount.ExecuteReader())
                 {
                     if (dr.HasRows)
@@ -38,22 +34,19 @@ namespace ATM
                         Console.WriteLine("No rows found.");
                     }
                     Console.WriteLine("Press any key to logout...");
-                    Console.ReadLine();
+                    InputMethod.StringInput();
 
                 }
             }
         }
-        static void Withdraw(int amount,int cid) {
+        static void Withdraw(int amount,int CID) {
 
-            string connetionString = @"Server=localhost;Database=test;User ID=root;Password=;SSL Mode=None";
-            using (MySqlConnection cnn = new MySqlConnection(connetionString))
+            using (MySqlConnection cnn = new MySqlConnection(SQLCommands.ConnectionString()))
             {
                 cnn.Open();
 
                 int currentA;
-
-                string currentAmount = String.Format($"SELECT Cbal from `customer` WHERE CID={cid}");
-                MySqlCommand commandAmount = new MySqlCommand(currentAmount, cnn);
+                MySqlCommand commandAmount = new MySqlCommand(SQLCommands.GetBal(CID), cnn);
                 using (MySqlDataReader dr = commandAmount.ExecuteReader())
                 {
                     dr.Read();
@@ -68,32 +61,25 @@ namespace ATM
                 else
                 {
                     int finalAmount = currentA - amount;
-
-
-                    string withdraw = String.Format($"UPDATE `customer` SET Cbal={finalAmount}");
-                    MySqlCommand commandWithdraw = new MySqlCommand(withdraw, cnn);
+                    MySqlCommand commandWithdraw = new MySqlCommand(SQLCommands.SetBal(finalAmount,CID), cnn);
                     using (MySqlDataReader dr = commandWithdraw.ExecuteReader())
                     {
                         //Console.WriteLine(dr.Read());
                     }
-                    string withdrawTransaction = String.Format($"INSERT INTO `transaction` (`TID`, `CID_FROM`, `CID_TO`, `Camount`) VALUES(NULL, NULL, '{cid}', '{-amount}')");
-                    MySqlCommand commandWithdrawTransaction = new MySqlCommand(withdrawTransaction, cnn);
+                    MySqlCommand commandWithdrawTransaction = new MySqlCommand(SQLCommands.SetTransactionDetails(CID,-amount), cnn);
                     using (MySqlDataReader dr = commandWithdrawTransaction.ExecuteReader())
                     {
                         //Console.WriteLine(dr.Read());
                     }
                 }
-            }
-
-            
+            } 
         }
 
-        static void Deposit(int amount,int cid)
+        static void Deposit(int amount,int CID)
         {
             Console.Clear();
 
-            string connetionString = @"Server=localhost;Database=test;User ID=root;Password=;SSL Mode=None";
-            using (MySqlConnection cnn = new MySqlConnection(connetionString)){
+            using (MySqlConnection cnn = new MySqlConnection(SQLCommands.ConnectionString())){
                 try
                 {
                     cnn.Open();
@@ -108,8 +94,7 @@ namespace ATM
                     }
                     */
                     int currentA;
-                    string currentAmount = String.Format($"SELECT Cbal from `customer` WHERE CID={cid}");
-                    MySqlCommand commandAmount = new MySqlCommand(currentAmount, cnn);
+                    MySqlCommand commandAmount = new MySqlCommand(SQLCommands.GetBal(CID), cnn);
                     using (MySqlDataReader dr = commandAmount.ExecuteReader())
                     {
                         dr.Read();
@@ -118,16 +103,12 @@ namespace ATM
                     }
 
                     int finalAmount = currentA + amount;
-
-                    string deposit = String.Format($"UPDATE `customer` SET Cbal={finalAmount}");
-                    MySqlCommand commandDeposit = new MySqlCommand(deposit, cnn);
+                    MySqlCommand commandDeposit = new MySqlCommand(SQLCommands.SetBal(finalAmount,CID), cnn);
                     using (MySqlDataReader dr = commandDeposit.ExecuteReader())
                     {
                         //Console.WriteLine(dr.Read());
                     }
-
-                    string depositTransaction = String.Format($"INSERT INTO `transaction` (`TID`, `CID_FROM`, `CID_TO`, `Camount`) VALUES(NULL, NULL, '{cid}', '+{amount}')");
-                    MySqlCommand commandTransaction = new MySqlCommand(depositTransaction, cnn);
+                    MySqlCommand commandTransaction = new MySqlCommand(SQLCommands.SetTransactionDetails(CID,amount), cnn);
                     using (MySqlDataReader dr = commandTransaction.ExecuteReader())
                     {
                         //Console.WriteLine(dr.Read());
@@ -136,20 +117,16 @@ namespace ATM
                 catch (Exception ex){
                     Console.WriteLine(ex.Message);
                 }
-                
-
             }
         }
 
         static void CreateTable(MySqlConnection cnn){
-            string CreateTable_customer = String.Format("CREATE TABLE `test`.`customer` ( `CID` INT NOT NULL AUTO_INCREMENT , `Cname` TEXT NOT NULL , `Cpass` TEXT NOT NULL , `Cbal` INT NOT NULL DEFAULT '0' , PRIMARY KEY (`CID`)) ENGINE = InnoDB;");
-            MySqlCommand commandCustomer = new MySqlCommand(CreateTable_customer, cnn);
+            MySqlCommand commandCustomer = new MySqlCommand(SQLCommands.CreateCustomerTable(), cnn);
             using (MySqlDataReader dr = commandCustomer.ExecuteReader())
             {
                 //Console.WriteLine(dr.Read());
             }
-            string CreateTable_transcation = String.Format("CREATE TABLE `test`.`transaction` ( `TID` INT NOT NULL AUTO_INCREMENT , `CID_FROM` INT ,`CID_TO` INT NOT NULL , `Camount` INT NOT NULL, PRIMARY KEY (`TID`)) ENGINE = InnoDB;");
-            MySqlCommand commandTranscation = new MySqlCommand(CreateTable_transcation, cnn);
+            MySqlCommand commandTranscation = new MySqlCommand(SQLCommands.CreateTransactionTable(), cnn);
             using (MySqlDataReader dr = commandTranscation.ExecuteReader())
             {
                 //Console.WriteLine(dr.Read());
@@ -157,66 +134,58 @@ namespace ATM
         }
 
         static void Createaccount(){
+
             try
             {
+
                 Console.Clear();
-                string connetionString = @"Server=localhost;Database=test;User ID=root;Password=;SSL Mode=None";
-                using (MySqlConnection cnn = new MySqlConnection(connetionString))
+                using (MySqlConnection cnn = new MySqlConnection(SQLCommands.ConnectionString()))
                 {
                     cnn.Open();
                     //Console.WriteLine("Connection Open  !");
-                    Console.Write("Enter your NAME: ");
-                    String name = Console.ReadLine();
-                    Console.Write("Create a Password: ");
-                    String pass = Console.ReadLine();
-                    string insert = String.Format($"INSERT INTO `customer` (`CID`, `Cname`, `Cpass`, `Cbal`) VALUES(NULL,'{name}','{pass}','0')");
-                    MySqlCommand command = new MySqlCommand(insert, cnn);
+
+                    String name = StandardMessage.CreateAccountName();
+                    String pass = StandardMessage.CreateAccountPass();
+
+
+                    MySqlCommand command = new MySqlCommand(SQLCommands.CreateAccount(name, pass), cnn);
+
                     using (MySqlDataReader dr = command.ExecuteReader()) {
                         //Console.WriteLine(dr.Read());
                     }
-                    Console.Clear();
-                    Console.WriteLine("Account Created Succesfully!!\n\n\n");
-                    /*
-                    using (MySqlDataReader dr = command.ExecuteReader())
-                    {
-                        Console.WriteLine(dr.Read());
-                    }
-                    */
+
+                    StandardMessage.CreateAccountSuccesfully();
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Cannot open connection: Reason:" + ex.Message);
             }
-
         }
 
         static void Login(String uname, String password){
-            
-            string connetionString = @"Server=localhost;Database=test;User ID=root;Password=;SSL Mode=None";
-            using (MySqlConnection cnn = new MySqlConnection(connetionString))
-            {
 
+            using (MySqlConnection cnn = new MySqlConnection(SQLCommands.ConnectionString()))
+            {
                 try
                 {
                     cnn.Open();
                     int bal, CID;
 
-                    string getUsername = String.Format($"SELECT Cbal,CID from `customer` WHERE Cname='{uname}' AND Cpass='{password}'");
-                    MySqlCommand commandUsername = new MySqlCommand(getUsername, cnn);
+                    MySqlCommand commandUsername = new MySqlCommand(SQLCommands.GetUserDetails(uname,password), cnn);
                     using (MySqlDataReader dr = commandUsername.ExecuteReader())
                     {
                         dr.Read();
                         bal = dr.GetInt32(0);
                         CID = dr.GetInt32(1);
-                        Console.WriteLine($"NAME: {uname}\nCID: {CID}\nCurrent account balance= {bal}");
-                        Console.Write("\n\n\n1)Withdraw\n2)Transaction History\n3)Logout\nChoose an option: ");
-                        int x = Convert.ToInt32(Console.ReadLine());
+
+                        StandardMessage.LoginMessage(CID,uname,bal);
+                        
+                        int x = InputMethod.IntInput();
                         if (x == 1)
                         {
-                            Console.Clear();
-                            Console.WriteLine("Enter amount to withdraw: ");
-                            int amount = Convert.ToInt32(Console.ReadLine());
+                            StandardMessage.WithdrawPage();
+                            int amount = InputMethod.IntInput();
                             Withdraw(amount, CID);
                         }
                         else if (x == 2) {
@@ -228,15 +197,11 @@ namespace ATM
                 catch (Exception ex) {
                     Console.WriteLine(ex.Message);
                 }
-                
-
             }
-
         }
 
         static bool Checktable(MySqlConnection cnn) {
-            string strCheckTable = String.Format("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'customer'");
-            MySqlCommand command = new MySqlCommand(strCheckTable, cnn);
+            MySqlCommand command = new MySqlCommand(SQLCommands.CheckTable(), cnn);
             using (MySqlDataReader dr = command.ExecuteReader())
             {
                 if (dr.Read())
@@ -251,14 +216,12 @@ namespace ATM
                     return false;
                 }
             }
-            
         }
 
         static void Main(string[] args)
         {
             //Console.WriteLine("Hello World!");
-            string connetionString = @"Server=localhost;Database=test;User ID=root;Password=;SSL Mode=None";
-            using (MySqlConnection cnn = new MySqlConnection(connetionString))
+            using (MySqlConnection cnn = new MySqlConnection(SQLCommands.ConnectionString()))
             {
                 cnn.Open();
                 if (Checktable(cnn)==false)
@@ -270,27 +233,21 @@ namespace ATM
             int exit = 1;
             while (exit == 1)
             {
-                Console.WriteLine("Choose your Option:\n1)Create an Account\n2)Login\n3)Deposit\n4)EXIT");
-                int choice = Convert.ToInt32(Console.ReadLine());
+                StandardMessage.WelcomeMessage();
+                int choice = InputMethod.IntInput();
                 switch (choice)
                 {
                     case 1:
                         Createaccount();
                         break;
                     case 2:
-                        Console.Clear();
-                        Console.Write("Enter your Details\nUsername: ");
-                        String uname = Console.ReadLine();
-                        Console.Write("Password: ");
-                        String password = Console.ReadLine();
-                        Console.Clear();
+                        String uname = StandardMessage.GetUsername();
+                        String password = StandardMessage.GetPassword();
                         Login(uname, password);
                         break;
                     case 3:
-                        Console.Write("Enter the CID of the user: ");
-                        int cid = Convert.ToInt32(Console.ReadLine());
-                        Console.Write("Enter amount to be deposited: ");
-                        int amount = Convert.ToInt32(Console.ReadLine());
+                        int cid = StandardMessage.GetCID();
+                        int amount = StandardMessage.GetDepositAmount();
                         Deposit(amount, cid);
                         break;
                     case 4:
@@ -300,8 +257,6 @@ namespace ATM
                         break;
                 }
             }
-            
-            
         }
     }
 }
